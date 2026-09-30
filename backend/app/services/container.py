@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.services.customs import CustomsService
 from app.store import store
 
 MODULE = "container"
@@ -10,6 +11,9 @@ REQUIRED_FIELDS = ["箱号", "箱型尺寸", "箱主代码"]
 STATUS_ORDER = ["在场", "已装船", "已提箱", "待查验"]
 ACTION_RULES = {"装船出场": "已装船", "办理提箱": "已提箱", "安排查验": "待查验"}
 NEGATIVE_ACTIONS = []
+
+# 查验时长不在本模块另算：直接复用海关查验的同一份换算结果。
+_customs_service = CustomsService()
 
 
 class ContainerService:
@@ -28,10 +32,19 @@ class ContainerService:
             rows = [row for row in rows if row.get("status") == status]
         total = len(rows)
         start = max(page - 1, 0) * size
-        return rows[start:start + size], total
+        items = [self._with_customs_duration(row) for row in rows[start:start + size]]
+        return items, total
 
     def get_entry(self, entry_id: int) -> dict[str, Any] | None:
-        return store.find(MODULE, entry_id)
+        entry = store.find(MODULE, entry_id)
+        return self._with_customs_duration(entry) if entry is not None else None
+
+    @staticmethod
+    def _with_customs_duration(entry: dict[str, Any]) -> dict[str, Any]:
+        """本页展示的查验时长直接取海关查验那份，绝不在集装箱模块另写一套换算。"""
+        view = dict(entry)
+        view["查验时长"] = _customs_service.duration_for_container(entry.get("箱号"))
+        return view
 
     def create_entry(self, values: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str]]:
         missing = [field for field in REQUIRED_FIELDS if not str(values.get(field) or "").strip()]

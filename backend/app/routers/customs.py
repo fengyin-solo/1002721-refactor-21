@@ -50,9 +50,13 @@ def create_entry(payload: EntryPayload) -> ActionResult:
 
 @router.post("/{entry_id}/actions", response_model=ActionResult)
 def run_action(entry_id: int, payload: EntryPayload) -> ActionResult:
-    """对单条查验记录执行安排查验、登记结果、安排复验；不允许的动作会被拦下并说明原因。"""
+    """对单条查验记录执行安排查验、登记结果、安排复验；不允许的动作会被拦下并说明原因。
+
+    三个环节随动作登记的时间（开箱时间/封箱时间/复验时间，或统一的「时间」字段）都在
+    service 里走同一套时间换算；重复登记同一环节只认第一次。
+    """
     action = str(payload.values.get("action") or "").strip()
-    entry, message = service.run_action(entry_id, action)
+    entry, message = service.run_action(entry_id, action, payload.values)
     if entry is None:
         return ActionResult(ok=False, message=message)
     return ActionResult(ok=True, message=message, entry=entry)

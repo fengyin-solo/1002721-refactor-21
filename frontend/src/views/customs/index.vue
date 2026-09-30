@@ -70,10 +70,17 @@ import { request } from '@/api/client'
 type Row = Record<string, string | number | null>
 
 const ENDPOINT = '/api/customs'
-const columns = ["查验编号", "箱号", "查验类型", "查验级别", "开箱时间", "查验结果", "封箱时间", "查验状态"]
+const columns = ["查验编号", "箱号", "查验类型", "查验级别", "开箱时间", "查验结果", "封箱时间", "查验时长", "查验状态"]
 const actions = ["安排查验", "登记结果", "安排复验"]
 const statuses = ["待查验", "查验中", "已放行", "待复验"]
 const stats = [{"label": "待查验箱", "value": 0}, {"label": "查验中箱", "value": 0}, {"label": "已放行箱", "value": 0}]
+
+// 每个环节登记的时间字段都收敛到后端同一套换算，前端只负责把录入值原样带上。
+const ACTION_TIME_LABEL: Record<string, string> = {
+  安排查验: '开箱时间',
+  登记结果: '封箱时间',
+  安排复验: '复验时间',
+}
 
 const rows = ref<Row[]>([])
 const total = ref(0)
@@ -96,14 +103,25 @@ function openCreate() {
 
 async function runAction(action: string, row: Row) {
   errorMessage.value = ''
+  const timeLabel = ACTION_TIME_LABEL[action] ?? '时间'
+  const input = window.prompt(`请输入${action}的${timeLabel}（本地时间，如 2026-09-01 23:50；留空按待补录处理）`)
+  if (input === null) {
+    return
+  }
+  const values: Record<string, string> = { action }
+  if (input.trim()) {
+    values[timeLabel] = input.trim()
+  }
   try {
     const response = await request(`${ENDPOINT}/${row.id}/actions`, {
       method: 'POST',
-      body: JSON.stringify({ action }),
+      body: JSON.stringify({ values }),
     })
-    if (!response.ok) {
-      throw new Error('海关查验动作未生效，请稍后重试')
+    const payload = await response.json().catch(() => null)
+    if (!response.ok || payload?.ok === false) {
+      throw new Error(payload?.message ?? '海关查验动作未生效，请稍后重试')
     }
+    errorMessage.value = payload?.message ?? ''
     await reload()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '海关查验操作失败'
