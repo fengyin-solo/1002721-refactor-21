@@ -70,7 +70,7 @@ import { request } from '@/api/client'
 type Row = Record<string, string | number | null>
 
 const ENDPOINT = '/api/container'
-const columns = ["箱号", "箱型尺寸", "箱主代码", "毛重", "净重", "铅封号", "危品等级", "箱状态"]
+const columns = ["箱号", "箱型尺寸", "箱主代码", "毛重", "净重", "铅封号", "危品等级", "箱状态", "查验时长"]
 const actions = ["装船出场", "办理提箱", "安排查验"]
 const statuses = ["在场", "已装船", "已提箱", "待查验"]
 const stats = [{"label": "在场箱量", "value": 0}, {"label": "已装船箱", "value": 0}, {"label": "已提箱", "value": 0}]

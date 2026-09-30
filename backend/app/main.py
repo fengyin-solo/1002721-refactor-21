@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routers import ROUTERS
+from app.services.inspection_time import backfill_existing
 from app.store import store
 
 app = FastAPI(title="港口集装箱作业管理平台", version="1.0.0")
@@ -21,6 +22,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 换算规矩换过之后，用统一算法重算已有查验记录；录入时间沿用当初的值。
+backfill_existing()
 
 for module in ROUTERS:
     app.include_router(module.router)

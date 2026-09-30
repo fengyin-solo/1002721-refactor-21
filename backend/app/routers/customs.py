@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/customs", tags=["海关查验"])
 
 service = CustomsService()
 
-LIST_FIELDS = ["查验编号", "箱号", "查验类型", "查验级别", "开箱时间", "查验结果", "封箱时间", "查验状态"]
+LIST_FIELDS = ["查验编号", "箱号", "查验类型", "查验级别", "开箱时间", "查验结果", "封箱时间", "查验时长", "查验状态"]
 STATUSES = ["待查验", "查验中", "已放行", "待复验"]
 
 
@@ -52,7 +52,7 @@ def create_entry(payload: EntryPayload) -> ActionResult:
 def run_action(entry_id: int, payload: EntryPayload) -> ActionResult:
     """对单条查验记录执行安排查验、登记结果、安排复验；不允许的动作会被拦下并说明原因。"""
     action = str(payload.values.get("action") or "").strip()
-    entry, message = service.run_action(entry_id, action)
+    entry, message = service.run_action(entry_id, action, payload.values)
     if entry is None:
         return ActionResult(ok=False, message=message)
     return ActionResult(ok=True, message=message, entry=entry)
